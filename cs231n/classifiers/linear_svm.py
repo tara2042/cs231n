@@ -26,19 +26,26 @@ def svm_loss_naive(W, X, y, reg):
   num_classes = W.shape[1]
   num_train = X.shape[0]
   loss = 0.0
+  
   for i in xrange(num_train):
     scores = X[i].dot(W)
     correct_class_score = scores[y[i]]
+    
     for j in xrange(num_classes):
       if j == y[i]:
         continue
+    
       margin = scores[j] - correct_class_score + 1 # note delta = 1
+      
       if margin > 0:
         loss += margin
+        dW[:,j] += X[i,:]
+        dW[:,y[i]] -= X[i,:]
 
   # Right now the loss is a sum over all training examples, but we want it
   # to be an average instead so we divide by num_train.
   loss /= num_train
+  dW /=num_train
 
   # Add regularization to the loss.
   loss += reg * np.sum(W * W)
@@ -70,7 +77,27 @@ def svm_loss_vectorized(W, X, y, reg):
   # Implement a vectorized version of the structured SVM loss, storing the    #
   # result in loss.                                                           #
   #############################################################################
-  pass
+  scores = np.dot(W.T, X.T)
+  #scores = X.dot(W)
+  
+  print(scores.shape)
+  
+  score_correction = np.ones(scores.shape) * scores[y, np.arange(0, scores.shape[1])]
+  factor = np.ones(scores.shape) # Correction factor of one '1'
+  Margin = scores - score_correction + factor
+
+  Margin[Margin < 0] = 0
+  Margin[y, np.arange(0, scores.shape[1])] = 0 # Don't count y_i
+  loss = np.sum(Margin)
+
+  # Average over number of training examples
+  num_train = X.shape[1]
+  loss /= num_train
+
+  # Add regularization
+  loss += 0.5 * reg * np.sum(W * W)
+  
+  #pass
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
@@ -85,7 +112,20 @@ def svm_loss_vectorized(W, X, y, reg):
   # to reuse some of the intermediate values that you used to compute the     #
   # loss.                                                                     #
   #############################################################################
-  pass
+
+  Margin = scores - score_correction + factor
+
+  Margin[Margin < 0] = 0
+  Margin[Margin > 0] = 1
+  Margin[y, np.arange(0, scores.shape[1])] = 0 # Don't count y_i
+  Margin[y, np.arange(0, scores.shape[1])] = -1 * np.sum(Margin, axis=0)
+  dW = np.dot(Margin, X)
+
+  # Average over number of training examples
+  num_train = X.shape[1]
+  dW /= num_train
+  dW += reg * W
+  #pass
   #############################################################################
   #                             END OF YOUR CODE                              #
   #############################################################################
